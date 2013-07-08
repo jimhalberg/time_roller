@@ -1,8 +1,13 @@
 require 'rubygems'
 require 'fastercsv'
+require 'fileutils'
 
-# put this file where you like.  In that same spot, add a directory called "processed".  Also put the csvs that you want to run with in the same spot as this file and consider removing spaces from their names (or making this code better).
-FILE_LOCATION = File.dirname(__FILE__) + '/'
+#### RUN DIRECTIONS:
+#
+# 1. Create a new directory next to time_roller.rb, probably with a name that indicates when you're going to run (let's say "2013-07-08-10AM")
+# 2. Export the timesheet csvs and put them inside that directory.  Name the csvs such that they retain the person's name, but no longer have spaces
+# 3. Run like this: ruby time_roller.rb "2013-07-08-10AM"
+# 4. Checkout your run results in the csv that was just created in 2013-07-08-10AM/processed/
 
 COLUMN_NAMES = {
   :primary_bucket => 'primary bucket',
@@ -14,11 +19,30 @@ COLUMN_NAMES = {
 
 def main
   puts "It's processing time time!"
-  Dir.glob("#{ FILE_LOCATION }*.csv") do |filename|
+
+  setup_source_files
+
+  @filenames.each do |filename|
     @filename = filename
     handle_file
   end
   sheet_category_report
+end
+
+def setup_source_files
+  @directory_for_run = ARGV[0].to_s
+  if @directory_for_run.length == 0
+    raise "You need to give a directory name as an argument."
+
+  elsif File.directory?(@directory_for_run)
+    @filenames = Dir.glob("#{ @directory_for_run }/*.csv")
+    if @filenames.length == 0
+      raise "No source files found at: #{ File.dirname(__FILE__) }/#{ @directory_for_run }/*"
+    end
+
+  else
+    raise "Could not find directory: #{ File.dirname(__FILE__) }/#{ @directory_for_run }"
+  end
 end
 
 def handle_file
@@ -104,8 +128,9 @@ end
 
 def sheet_category_report
   sheet_category_rollup
-
-  FasterCSV.open("#{ FILE_LOCATION }processed/#{ Time.now.strftime("%Y-%m-%d %H-%M") }.csv", "w") do |output_csv|
+puts "trying to create: #{ @directory_for_run }/processed"
+  FileUtils.mkdir_p("#{ @directory_for_run }/processed") unless File.directory?("#{ @directory_for_run }/processed")
+  FasterCSV.open("#{ @directory_for_run }/processed/#{ Time.now.strftime("%Y-%m-%d %H-%M") }.csv", "w") do |output_csv|
 
     @rollup.each do |name, primary_bucket_hash|
       output_csv << [ formatted_name(name) ] + @time_buckets.collect{ |tb| [ tb, '%' ] }.flatten + [ 'Overall', '%' ] # section header row
