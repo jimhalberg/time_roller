@@ -126,9 +126,12 @@ def sheet_category_rollup
   end
 end
 
+def calculate_percentage(cat_number, total_number)
+  "#{ sprintf('%.2f', cat_number.to_f / total_number.to_f * 100) }%"
+end
+
 def sheet_category_report
   sheet_category_rollup
-puts "trying to create: #{ @directory_for_run }/processed"
   FileUtils.mkdir_p("#{ @directory_for_run }/processed") unless File.directory?("#{ @directory_for_run }/processed")
   FasterCSV.open("#{ @directory_for_run }/processed/#{ Time.now.strftime("%Y-%m-%d %H-%M") }.csv", "w") do |output_csv|
 
@@ -142,8 +145,7 @@ puts "trying to create: #{ @directory_for_run }/processed"
           total += minutes_for_cell
           minutes << [ time_bucket, minutes_for_cell ]
         end
-        # output_csv << [ primary_bucket ] + minutes.collect{ |mins_array| [ hours_minutes(mins_array[1]), @sheet_timeframe[name][mins_array[0]] ] }.flatten + [ hours_minutes(total), 'total % here' ]
-        output_csv << [ primary_bucket ] + minutes.collect{ |mins_array| [ hours_minutes(mins_array[1]), "#{ sprintf('%.2f', mins_array[1].to_f / @sheet_timeframe[name][mins_array[0]] * 100) }%" ] }.flatten + [ hours_minutes(total), "#{ sprintf('%.2f', total.to_f / @sheet_timeframe[name].values.inject{ |sum, x| sum + x } * 100) }%" ]
+        output_csv << [ primary_bucket ] + minutes.collect{ |mins_array| [ hours_minutes(mins_array[1]), calculate_percentage(mins_array[1], @sheet_timeframe[name][mins_array[0]]) ] }.flatten + [ hours_minutes(total), calculate_percentage(total, @sheet_timeframe[name].values.inject{ |sum, x| sum + x }) ]
       end
 
       output_csv << []
